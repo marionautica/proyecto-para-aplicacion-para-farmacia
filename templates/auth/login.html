@@ -3,10 +3,11 @@
 {% block content %}
 <div class="row justify-content-center mt-5">
   <div class="col-12 col-sm-8 col-md-6 col-lg-4">
-    <div class="card shadow-sm border-0">
       <div class="card-header bg-isss text-white text-center py-4">
-        <i class="bi bi-hospital fs-1 d-block mb-1"></i>
-        <h4 class="mb-0 fw-bold">Bitfarma</h4>
+        <img src="{{ url_for('static', filename='logo_bitfarma.png') }}" 
+             alt="Bitfarma Logo" 
+             style="max-width: 200px; height: auto; display: block; margin: 0 auto 10px;">
+        
         <small class="opacity-75">Sistema de Gestión Farmacéutica</small>
       </div>
       <div class="card-body p-4">
