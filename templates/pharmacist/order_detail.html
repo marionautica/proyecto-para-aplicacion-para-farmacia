@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Orden #{{ order.id }} – Farmacia ISSS{% endblock %}
+{% block title %}Orden #{{ order.id }} – Bitfarma{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center mb-4">
   <a href="{{ url_for('pharmacist_prescription', prescription_id=order.prescription_id) }}"

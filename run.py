@@ -1,5 +1,5 @@
 """
-Punto de entrada de la aplicación Farmacia ISSS.
+Punto de entrada de la aplicación Bitfarma.
 Inicializa la base de datos y crea datos de prueba.
 """
 import os
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(os.path.dirname(__file__), 'uploads'), exist_ok=True)
     os.makedirs(os.path.join(os.path.dirname(__file__), 'labels'), exist_ok=True)
     init_db()
-    print("\n🏥 Farmacia ISSS - Iniciando servidor...")
+    print("\n🏥 Bitfarma - Iniciando servidor...")
     print("   URL: http://127.0.0.1:5000")
     print("   Admin:      admin / admin123")
     print("   Farmacéutico: farmacia / farm123")

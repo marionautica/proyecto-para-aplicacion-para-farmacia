@@ -1,4 +1,4 @@
-// Farmacia ISSS - Main JS
+// Bitfarma - Main JS
 
 document.addEventListener('DOMContentLoaded', function () {
 
