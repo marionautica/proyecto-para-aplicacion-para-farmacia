@@ -9,12 +9,11 @@ from flask_login import (LoginManager, login_user, logout_user,
                          login_required, current_user)
 from werkzeug.utils import secure_filename
 
-# Importación de modelos y generador de etiquetas
 from models import db, User, Prescription, Medication, Order, OrderItem, Label
 from label_generator import generate_label
 
 # ---------------------------------------------------------------------------
-# Configuración de la Aplicación
+# App factory / config (El motor y arranque seguro)
 # ---------------------------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,35 +21,34 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'isss-farmacia-secret-key-2024'
 
-# Configuración de Base de Datos (SQLite)
+# 1. Configuración de Base de Datos
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'farmacia.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# IMPORTANTE: Crear carpeta instance si no existe (Evita errores de SQLAlchemy)
+# 2. Creación segura de carpetas vitales
 db_folder = os.path.join(BASE_DIR, 'instance')
 if not os.path.exists(db_folder):
     os.makedirs(db_folder)
 
-# Configuración de Carpetas de Carga
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
 app.config['LABELS_FOLDER'] = os.path.join(BASE_DIR, 'labels')
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # Máximo 10 MB
-
-# Asegurar que existan las carpetas de archivos
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['LABELS_FOLDER'], exist_ok=True)
 
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 
-# Inicialización de extensiones
+# 3. Inicialización
 db.init_app(app)
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor inicia sesión para continuar.'
 login_manager.login_message_category = 'warning'
 
+
 # ---------------------------------------------------------------------------
-# Helpers y Decoradores
+# Helpers y Seguridad
 # ---------------------------------------------------------------------------
 
 def allowed_file(filename):
@@ -74,7 +72,6 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_globals():
-    """Inyecta el contador de stock bajo en todas las plantillas."""
     low_stock_count = 0
     if current_user.is_authenticated and current_user.role in ('admin', 'farmaceutico'):
         try:
@@ -84,6 +81,7 @@ def inject_globals():
         except:
             low_stock_count = 0
     return dict(low_stock_count=low_stock_count)
+
 
 # ---------------------------------------------------------------------------
 # Rutas de Autenticación
@@ -110,8 +108,9 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
+            next_page = request.args.get('next')
             flash(f'¡Bienvenido, {user.nombre_completo}!', 'success')
-            return redirect(url_for('index'))
+            return redirect(next_page or url_for('index'))
         flash('Usuario o contraseña incorrectos.', 'danger')
     return render_template('auth/login.html')
 
@@ -149,8 +148,9 @@ def logout():
     flash('Sesión cerrada.', 'info')
     return redirect(url_for('login'))
 
+
 # ---------------------------------------------------------------------------
-# Rutas del Paciente (Dashboard y Pago Bitcoin)
+# Rutas de Paciente
 # ---------------------------------------------------------------------------
 
 @app.route('/paciente')
@@ -197,14 +197,11 @@ def patient_upload():
 @login_required
 @role_required('paciente')
 def patient_payment(order_id):
-    """Interfaz de cobro con Bitcoin QR."""
     order = Order.query.get_or_404(order_id)
     if order.prescription.patient_id != current_user.id:
         abort(403)
-    
-    # Billetera Bitcoin de la Farmacia
+        
     wallet_btc = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
-    
     return render_template('patient/payment.html', order=order, wallet=wallet_btc)
 
 @app.route('/paciente/receta/<int:prescription_id>')
@@ -218,8 +215,9 @@ def patient_order_status(prescription_id):
     return render_template('patient/order_status.html',
                            prescription=prescription, orders=orders)
 
+
 # ---------------------------------------------------------------------------
-# Rutas del Farmacéutico (Cálculo de Precios y Despacho)
+# Rutas de Farmacéutico
 # ---------------------------------------------------------------------------
 
 @app.route('/farmaceutico')
@@ -251,11 +249,18 @@ def pharmacist_prescription(prescription_id):
 @login_required
 @role_required('farmaceutico')
 def pharmacist_create_order(prescription_id):
-    """Crea la orden calculando el total según el precio de los medicamentos."""
     prescription = Prescription.query.get_or_404(prescription_id)
 
     delivery_type = request.form.get('delivery_type')
     delivery_address = request.form.get('delivery_address', '').strip()
+
+    if delivery_type not in ('sucursal', 'envio'):
+        flash('Tipo de entrega inválido.', 'danger')
+        return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
+
+    if delivery_type == 'envio' and not delivery_address:
+        flash('Debe ingresar una dirección para el envío.', 'danger')
+        return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
 
     medication_ids = request.form.getlist('medication_id[]')
     cantidades = request.form.getlist('cantidad[]')
@@ -267,48 +272,53 @@ def pharmacist_create_order(prescription_id):
         flash('Debe agregar al menos un medicamento.', 'danger')
         return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
 
-    # Crear la orden principal
+    for i, med_id in enumerate(medication_ids):
+        med = Medication.query.get(int(med_id))
+        if not med:
+            flash(f'Medicamento ID {med_id} no encontrado.', 'danger')
+            return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
+        cantidad = int(cantidades[i])
+        if med.stock < cantidad:
+            flash(f'Stock insuficiente para {med.nombre}. Disponible: {med.stock}', 'danger')
+            return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
+
     order = Order(
         prescription_id=prescription_id,
         pharmacist_id=current_user.id,
         delivery_type=delivery_type,
         delivery_address=delivery_address if delivery_type == 'envio' else None,
-        status='pendiente_pago', # Estado inicial requiere pago
+        status='pendiente_pago',
         total_amount=0.0
     )
     db.session.add(order)
     db.session.flush()
 
-    total_acumulado = 0.0
+    total_calculado = 0.0
 
     for i, med_id in enumerate(medication_ids):
         med = Medication.query.get(int(med_id))
         cantidad = int(cantidades[i])
         
-        # Lógica de cobro: Precio * Cantidad
-        subtotal = med.precio * cantidad
-        total_acumulado += subtotal
-        
-        # Descontar del inventario
         med.stock -= cantidad
+        subtotal = med.precio * cantidad
+        total_calculado += subtotal
 
         item = OrderItem(
             order_id=order.id,
             medication_id=med.id,
             cantidad=cantidad,
-            precio_unitario=med.precio, # Guardar precio histórico
+            precio_unitario=med.precio,
             dosis_indicada=dosis_list[i],
             frecuencia=frecuencias[i],
             duracion=duraciones[i]
         )
         db.session.add(item)
 
-    # Actualizar estado de receta y total de orden
-    order.total_amount = total_acumulado
+    order.total_amount = total_calculado
     prescription.status = 'pendiente_pago'
     db.session.commit()
 
-    flash(f'Orden creada. Total calculado: ${total_acumulado:.2f}', 'success')
+    flash(f'Orden creada. Total a cobrar: ${total_calculado:.2f}', 'success')
     return redirect(url_for('pharmacist_order_detail', order_id=order.id))
 
 @app.route('/farmaceutico/orden/<int:order_id>')
@@ -318,12 +328,31 @@ def pharmacist_order_detail(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template('pharmacist/order_detail.html', order=order)
 
+@app.route('/farmaceutico/orden/<int:order_id>/generar-vineta/<int:item_id>')
+@login_required
+@role_required('farmaceutico')
+def generate_vineta(order_id, item_id):
+    order = Order.query.get_or_404(order_id)
+    item = OrderItem.query.get_or_404(item_id)
+    if item.order_id != order_id: abort(400)
+    
+    existing = Label.query.filter_by(order_item_id=item_id).first()
+    if existing:
+        return send_file(existing.pdf_path, as_attachment=True, download_name=os.path.basename(existing.pdf_path))
+    
+    pdf_path = generate_label(item, app.config['LABELS_FOLDER'])
+    label = Label(order_item_id=item_id, pdf_path=pdf_path)
+    db.session.add(label)
+    db.session.commit()
+    return send_file(pdf_path, as_attachment=True, download_name=os.path.basename(pdf_path))
+
 @app.route('/farmaceutico/orden/<int:order_id>/estado', methods=['POST'])
 @login_required
 @role_required('farmaceutico')
 def update_order_status(order_id):
     order = Order.query.get_or_404(order_id)
     new_status = request.form.get('status')
+    
     if new_status not in ('listo', 'entregado', 'en_proceso'):
         flash('Estado inválido.', 'danger')
         return redirect(url_for('pharmacist_order_detail', order_id=order_id))
@@ -333,12 +362,16 @@ def update_order_status(order_id):
         order.prescription.status = 'entregado'
     elif new_status == 'listo':
         order.prescription.status = 'listo'
+    elif new_status == 'en_proceso':
+        order.prescription.status = 'en_proceso'
+        
     db.session.commit()
     flash('Estado actualizado.', 'success')
     return redirect(url_for('pharmacist_order_detail', order_id=order_id))
 
+
 # ---------------------------------------------------------------------------
-# Rutas del Administrador (Inventario y Usuarios)
+# Rutas de Administrador
 # ---------------------------------------------------------------------------
 
 @app.route('/admin')
@@ -347,13 +380,17 @@ def update_order_status(order_id):
 def admin_dashboard():
     total_users = User.query.count()
     total_prescriptions = Prescription.query.count()
+    pending = Prescription.query.filter_by(status='pendiente').count()
     total_orders = Order.query.count()
     low_stock_meds = Medication.query.filter(Medication.stock <= Medication.stock_minimo).all()
+    recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
     return render_template('admin/dashboard.html', 
                            total_users=total_users,
-                           total_prescriptions=total_prescriptions,
-                           total_orders=total_orders,
-                           low_stock_meds=low_stock_meds)
+                           total_prescriptions=total_prescriptions, 
+                           pending=pending,
+                           total_orders=total_orders, 
+                           low_stock_meds=low_stock_meds,
+                           recent_orders=recent_orders)
 
 @app.route('/admin/inventario')
 @login_required
@@ -367,7 +404,6 @@ def admin_inventory():
 @role_required('admin')
 def admin_med_new():
     if request.method == 'POST':
-        # Captura de precio con limpieza de comas
         precio_val = float(request.form.get('precio', '0').replace(',', '.'))
         
         med = Medication(
@@ -401,6 +437,72 @@ def admin_med_edit(med_id):
         return redirect(url_for('admin_inventory'))
     return render_template('admin/med_form.html', med=med, action='Editar')
 
+@app.route('/admin/inventario/<int:med_id>/eliminar', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_med_delete(med_id):
+    med = Medication.query.get_or_404(med_id)
+    db.session.delete(med)
+    db.session.commit()
+    flash('Medicamento eliminado.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+@app.route('/admin/usuarios')
+@login_required
+@role_required('admin')
+def admin_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin/users.html', users=users)
+
+@app.route('/admin/usuarios/<int:user_id>/rol', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_change_role(user_id):
+    user = User.query.get_or_404(user_id)
+    new_role = request.form.get('role')
+    if new_role in ('paciente', 'farmaceutico', 'admin'):
+        user.role = new_role
+        db.session.commit()
+        flash(f'Rol de {user.username} actualizado.', 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/reportes')
+@login_required
+@role_required('admin')
+def admin_reports():
+    from sqlalchemy import func
+    
+    orders_by_day = db.session.query(
+        func.date(Order.created_at).label('day'), func.count(Order.id).label('count')
+    ).group_by(func.date(Order.created_at)).order_by('day').limit(30).all()
+
+    top_meds = db.session.query(
+        Medication.nombre, func.sum(OrderItem.cantidad).label('total')
+    ).join(OrderItem).group_by(Medication.id).order_by(func.sum(OrderItem.cantidad).desc()).limit(10).all()
+
+    status_counts = db.session.query(
+        Prescription.status, func.count(Prescription.id)
+    ).group_by(Prescription.status).all()
+
+    return render_template('admin/reports.html', 
+                           orders_by_day=orders_by_day,
+                           top_meds=top_meds, 
+                           status_counts=status_counts)
+
+@app.route('/admin/recetas')
+@login_required
+@role_required('admin')
+def admin_prescriptions():
+    status_filter = request.args.get('status', '')
+    query = Prescription.query
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    prescriptions = query.order_by(Prescription.upload_date.desc()).all()
+    return render_template('admin/prescriptions.html',
+                           prescriptions=prescriptions,
+                           status_filter=status_filter)
+
+
 # ---------------------------------------------------------------------------
 # Otros (Cargas y Errores)
 # ---------------------------------------------------------------------------
@@ -408,18 +510,19 @@ def admin_med_edit(med_id):
 @app.route('/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
+    prescription = Prescription.query.filter_by(filename=filename).first()
+    if prescription:
+        if current_user.role == 'paciente' and prescription.patient_id != current_user.id:
+            abort(403)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.exists(filepath):
+    if not os.path.exists(filepath): 
         abort(404)
     return send_file(filepath)
 
 @app.errorhandler(403)
-def forbidden(e):
+def forbidden(e): 
     return render_template('errors/403.html'), 403
 
 @app.errorhandler(404)
-def not_found(e):
+def not_found(e): 
     return render_template('errors/404.html'), 404
-
-if __name__ == '__main__':
-    app.run(debug=True)
