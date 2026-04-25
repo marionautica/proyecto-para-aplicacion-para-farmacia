@@ -11,7 +11,7 @@ def init_db():
             admin = User(
                 username='admin',
                 role='admin',
-                nombre_completo='Administrador ISSS',
+                nombre_completo='Administrador Bitfarma',
                 num_seguro_social='ADMIN-0001'
             )
             admin.set_password('admin123')
