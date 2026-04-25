@@ -73,7 +73,7 @@ class Medication(db.Model):
     unidad = db.Column(db.String(50), nullable=False)
     
     # NUEVO: Columna para guardar el precio base del medicamento
-    precio = db.Column(db.Float, default=0.0) 
+    precio = db.Column(db.Numeric(precision=18, scale=8), default=0.0)    
     
     stock = db.Column(db.Integer, default=0)
     stock_minimo = db.Column(db.Integer, default=10)
