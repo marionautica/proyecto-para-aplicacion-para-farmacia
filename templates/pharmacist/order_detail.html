@@ -1,128 +1,184 @@
 {% extends 'base.html' %}
 {% block title %}Orden #{{ order.id }} – Bitfarma{% endblock %}
+
 {% block content %}
-<div class="d-flex align-items-center mb-4">
-  <a href="{{ url_for('pharmacist_prescription', prescription_id=order.prescription_id) }}"
-     class="btn btn-light btn-sm me-3">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h4 class="fw-bold mb-0">Orden #{{ order.id }}</h4>
-    <small class="text-muted">Creada el {{ order.created_at.strftime('%d/%m/%Y a las %H:%M') }}</small>
-  </div>
-  <span class="badge bg-{{ order.status_class() }} ms-3 fs-6">{{ order.status_label() }}</span>
-</div>
-
-<div class="row g-4">
-  <div class="col-12 col-lg-8">
-    <!-- Order items -->
-    <div class="card shadow-sm border-0 mb-3">
-      <div class="card-header bg-light fw-semibold">
-        <i class="bi bi-capsule me-1"></i>Medicamentos Dispensados
-      </div>
-      <div class="card-body p-0">
-        {% for item in order.items %}
-        <div class="border-bottom p-3 {% if loop.last %}border-0{% endif %}">
-          <div class="d-flex justify-content-between align-items-start mb-1">
-            <div>
-              <h6 class="mb-0 fw-bold">{{ item.medication.nombre }}</h6>
-              <small class="text-muted">
-                {{ item.medication.concentracion }} — {{ item.medication.unidad }}
-              </small>
-            </div>
-            <span class="badge bg-isss fs-6 px-3">{{ item.cantidad }} {{ item.medication.unidad }}</span>
-          </div>
-          <div class="row mt-2 g-2">
-            <div class="col-4">
-              <small class="text-muted d-block">Dosis</small>
-              <span class="fw-semibold small">{{ item.dosis_indicada }}</span>
-            </div>
-            <div class="col-4">
-              <small class="text-muted d-block">Frecuencia</small>
-              <span class="fw-semibold small">{{ item.frecuencia }}</span>
-            </div>
-            <div class="col-4">
-              <small class="text-muted d-block">Duración</small>
-              <span class="fw-semibold small">{{ item.duracion }}</span>
-            </div>
-          </div>
-          <div class="mt-2">
-            <a href="{{ url_for('generate_vineta', order_id=order.id, item_id=item.id) }}"
-               class="btn btn-outline-isss btn-sm">
-              <i class="bi bi-printer me-1"></i>
-              {% if item.label %}Descargar Viñeta{% else %}Generar Viñeta{% endif %}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('pharmacist_dashboard') }}" class="btn btn-light btn-sm me-3 shadow-sm">
+                <i class="bi bi-arrow-left"></i>
             </a>
-            {% if item.label %}
-            <small class="text-muted ms-2">
-              <i class="bi bi-check-circle-fill text-success"></i>
-              Generada el {{ item.label.generated_at.strftime('%d/%m/%Y') }}
-            </small>
-            {% endif %}
-          </div>
+            <div>
+                <h4 class="fw-bold mb-0 text-isss">Detalle de Orden #{{ order.id }}</h4>
+                <span class="badge bg-{{ order.status_class() }} mt-1">
+                    {{ order.status_label() }}
+                </span>
+            </div>
         </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <div class="col-12 col-lg-4">
-    <!-- Delivery info -->
-    <div class="card shadow-sm border-0 mb-3">
-      <div class="card-header bg-light fw-semibold">
-        <i class="bi bi-truck me-1"></i>Información de Entrega
-      </div>
-      <div class="card-body">
-        <div class="mb-2">
-          <small class="text-muted">Tipo:</small>
-          <div class="fw-semibold">
-            {% if order.delivery_type == 'sucursal' %}
-              <i class="bi bi-building text-isss me-1"></i>Retiro en Sucursal
-            {% else %}
-              <i class="bi bi-truck text-isss me-1"></i>Envío a Domicilio
-            {% endif %}
-          </div>
+        <div class="text-end">
+            <small class="text-muted d-block">Fecha de creación:</small>
+            <span class="fw-semibold">{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
         </div>
-        {% if order.delivery_address %}
-        <div class="mb-2">
-          <small class="text-muted">Dirección:</small>
-          <div>{{ order.delivery_address }}</div>
-        </div>
-        {% endif %}
-        <hr />
-        <div>
-          <small class="text-muted">Paciente:</small>
-          <div class="fw-semibold">{{ order.prescription.patient.nombre_completo }}</div>
-          <small class="text-muted">NSS: {{ order.prescription.patient.num_seguro_social or 'N/A' }}</small>
-        </div>
-      </div>
     </div>
 
-    <!-- Update status -->
-    {% if order.status != 'entregado' %}
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-light fw-semibold">
-        <i class="bi bi-arrow-right-circle me-1"></i>Actualizar Estado
-      </div>
-      <div class="card-body">
-        <form method="POST" action="{{ url_for('update_order_status', order_id=order.id) }}">
-          {% if order.status == 'en_proceso' %}
-          <button type="submit" name="status" value="listo" class="btn btn-success w-100 mb-2">
-            <i class="bi bi-check-circle me-1"></i>Marcar como Listo
-          </button>
-          {% endif %}
-          {% if order.status in ('en_proceso', 'listo') %}
-          <button type="submit" name="status" value="entregado" class="btn btn-secondary w-100">
-            <i class="bi bi-bag-check me-1"></i>Marcar como Entregado
-          </button>
-          {% endif %}
-        </form>
-      </div>
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-capsule-pill me-2 text-isss"></i>Medicamentos Despachados</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Medicamento</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th>Indicaciones</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ item.medication.nombre }}</div>
+                                        <small class="text-muted">{{ item.medication.concentracion }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary rounded-pill px-3">{{ item.cantidad }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="d-block"><strong>Dosis:</strong> {{ item.dosis_indicada }}</small>
+                                        <small class="d-block"><strong>Frecuencia:</strong> {{ item.frecuencia }}</small>
+                                        <small class="d-block"><strong>Duración:</strong> {{ item.duracion }}</small>
+                                    </td>
+                                    <td class="text-end fw-bold text-dark">
+                                        ${{ "%.2f"|format(item.precio_unitario * item.cantidad) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">TOTAL DE LA ORDEN:</td>
+                                    <td class="text-end fw-bold text-success fs-5">
+                                        ${{ "%.2f"|format(order.total_amount) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-muted small text-uppercase mb-3">Datos del Paciente</h6>
+                            <p class="mb-1"><strong>Nombre:</strong> {{ order.prescription.patient.nombre_completo }}</p>
+                            <p class="mb-1"><strong>N° Seguro Social:</strong> {{ order.prescription.patient.num_seguro_social }}</p>
+                        </div>
+                        <div class="col-md-6 ps-md-4">
+                            <h6 class="fw-bold text-muted small text-uppercase mb-3">Receta de Referencia</h6>
+                            <p class="mb-3 small text-muted">ID Receta: #{{ order.prescription.id }}</p>
+                            <a href="{{ url_for('uploaded_file', filename=order.prescription.filename) }}" target="_blank" class="btn btn-outline-isss btn-sm">
+                                <i class="bi bi-file-earmark-medical me-1"></i> Ver Receta Original
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-gear-fill me-2"></i>Control de Proceso
+                </div>
+                <div class="card-body py-4">
+                    <form method="POST" action="{{ url_for('update_order_status', order_id=order.id) }}">
+                        
+                        {% if order.status == 'pendiente_pago' %}
+                            <div class="text-center mb-4">
+                                <i class="bi bi-currency-bitcoin display-4 text-warning"></i>
+                                <h5 class="fw-bold mt-2">Validación de Pago</h5>
+                                <p class="text-muted small">El paciente debe transferir <strong>${{ "%.2f"|format(order.total_amount) }}</strong> a la billetera institucional.</p>
+                            </div>
+                            <div class="alert alert-warning border-0 small mb-4">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Verifique su billetera antes de confirmar.
+                            </div>
+                            <input type="hidden" name="status" value="en_proceso">
+                            <button type="submit" class="btn btn-success w-100 py-2 fw-bold" onclick="return confirm('¿Confirma que el pago ha sido recibido correctamente?')">
+                                <i class="bi bi-check-lg me-1"></i> CONFIRMAR PAGO
+                            </button>
+
+                        {% elif order.status == 'en_proceso' %}
+                            <div class="text-center mb-4">
+                                <i class="bi bi-box-seam display-4 text-primary"></i>
+                                <h5 class="fw-bold mt-2">Preparación de Medicamentos</h5>
+                                <p class="text-muted small">Empaque los productos y genere las viñetas correspondientes.</p>
+                            </div>
+                            <input type="hidden" name="status" value="listo">
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                                <i class="bi bi-arrow-right-circle me-1"></i> MARCAR COMO LISTO
+                            </button>
+
+                        {% elif order.status == 'listo' %}
+                            <div class="text-center mb-4">
+                                <i class="bi bi-hand-thumbs-up display-4 text-success"></i>
+                                <h5 class="fw-bold mt-2">Listo para Entrega</h5>
+                                <p class="text-muted small">El paquete está en ventanilla esperando al paciente.</p>
+                            </div>
+                            <input type="hidden" name="status" value="entregado">
+                            <button type="submit" class="btn btn-isss w-100 py-2 fw-bold" onclick="return confirm('¿Confirma la entrega física de los medicamentos?')">
+                                <i class="bi bi-person-check me-1"></i> FINALIZAR ENTREGA
+                            </button>
+
+                        {% elif order.status == 'entregado' %}
+                            <div class="text-center py-3">
+                                <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                                    <i class="bi bi-check2-all fs-1"></i>
+                                </div>
+                                <h5 class="fw-bold text-success">Orden Finalizada</h5>
+                                <p class="text-muted small mb-0">Esta orden fue completada con éxito.</p>
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light fw-bold small text-uppercase">
+                    <i class="bi bi-truck me-1"></i>Método de Entrega
+                </div>
+                <div class="card-body">
+                    {% if order.delivery_type == 'sucursal' %}
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-building fs-3 text-isss me-3"></i>
+                            <div>
+                                <div class="fw-bold">Retiro en Sucursal</div>
+                                <small class="text-muted">El paciente vendrá a la farmacia.</small>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-house-door fs-3 text-isss me-3"></i>
+                            <div>
+                                <div class="fw-bold">Envío a Domicilio</div>
+                                <div class="small mt-1 p-2 bg-light rounded text-dark border">
+                                    {{ order.delivery_address }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
     </div>
-    {% else %}
-    <div class="alert alert-success">
-      <i class="bi bi-check2-all me-1"></i>Esta orden fue entregada.
-    </div>
-    {% endif %}
-  </div>
 </div>
 {% endblock %}
