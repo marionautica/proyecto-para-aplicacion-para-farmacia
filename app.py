@@ -199,11 +199,12 @@ def patient_order_status(prescription_id):
 # Rutas de Farmacéutico (Cálculo Financiero de Precisión)
 # ---------------------------------------------------------------------------
 
-@app.route('/farmaceutico')
+@app.route('/farmaceutico/receta/<int:prescription_id>')
 @login_required
 @role_required('farmaceutico')
-def pharmacist_dashboard():
-    status = request.args.get('status', 'pendiente')
-    query = Prescription.query.filter_by(status=status) if status != 'todos' else Prescription.query
-    prescriptions = query.order_by(Prescription.upload_date.asc()).all()
-    return render_template('pharmacist
+def pharmacist_prescription(prescription_id):
+    pres = Prescription.query.get_or_404(prescription_id)
+    return render_template('pharmacist/prescription_detail.html', 
+                           prescription=pres, 
+                           medications=Medication.query.all(), 
+                           orders=Order.query.filter_by(prescription_id=prescription_id).all())
