@@ -34,7 +34,7 @@
           <td>{{ med.concentracion }}</td>
           <td>{{ med.unidad }}</td>
           
-          <td class="text-success fw-bold">${{ "%.2f"|format(med.precio) }}</td>
+          <td class="text-success fw-bold">${{ "%.8f"|format(med.precio) }}</td>
           
           <td>
             <span class="badge fs-6 px-3 bg-{{ 'danger' if med.stock == 0 else 'warning text-dark' if med.is_low_stock() else 'success' }}">
