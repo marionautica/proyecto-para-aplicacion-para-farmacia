@@ -91,7 +91,7 @@
         <div class="card-body text-center bg-warning bg-opacity-10 py-4 rounded">
           <i class="bi bi-currency-bitcoin display-4 text-warning mb-2"></i>
           <h5 class="fw-bold">Pago Requerido</h5>
-          <p class="text-muted mb-3">Tu orden ha sido calculada y está a la espera de pago por <strong>${{ "%.2f"|format(current_order.total_amount) }}</strong>.</p>
+          <p class="text-muted mb-3">Tu orden ha sido calculada y está a la espera de pago por <strong>${{ "%.8f"|format(current_order.total_amount) }}</strong>.</p>
           <a href="{{ url_for('patient_payment', order_id=current_order.id) }}" class="btn btn-warning fw-bold px-4">
             Proceder al Pago <i class="bi bi-arrow-right ms-1"></i>
           </a>
@@ -135,7 +135,7 @@
           {% if order.total_amount > 0 %}
           <div class="mb-2">
             <small class="text-muted">Total a Pagar:</small>
-            <div class="fw-bold text-success">${{ "%.2f"|format(order.total_amount) }}</div>
+            <div class="fw-bold text-success">₿{{ "%.8f"|format(order.total_amount) }}</div>
           </div>
           {% endif %}
 
@@ -153,7 +153,7 @@
                   Frecuencia: {{ item.frecuencia }} — Duración: {{ item.duracion }}
                 </small>
                 {% if item.precio_unitario %}
-                <small class="fw-bold text-success">${{ "%.2f"|format(item.precio_unitario * item.cantidad) }}</small>
+                <small class="fw-bold text-success">${{ "%.8f"|format(item.precio_unitario * item.cantidad) }}</small>
                 {% endif %}
             </div>
           </div>
