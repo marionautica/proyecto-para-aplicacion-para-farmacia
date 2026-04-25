@@ -19,9 +19,9 @@ from label_generator import generate_label
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'isss-farmacia-secret-key-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'farmacia.db')
+db_folder = os.path.join(BASE_DIR, 'instance')
+if not os.path.exists(db_folder):
+    os.makedirs(db_folder)
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
