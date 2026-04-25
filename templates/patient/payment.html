@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Pago de Receta – Bitfarma{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+      
+      <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('patient_dashboard') }}" class="btn btn-outline-secondary btn-sm me-3">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="fw-bold mb-0 text-isss">Pago de Orden #{{ order.id }}</h4>
+      </div>
+
+      <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+        <div class="card-header bg-warning text-dark text-center py-3 border-0">
+          <h5 class="mb-0 fw-bold"><i class="bi bi-currency-bitcoin fs-4 me-2"></i>Pago Requerido en Bitcoin</h5>
+        </div>
+        
+        <div class="card-body p-4 text-center bg-white">
+          <p class="text-muted mb-1">Total a pagar por sus medicamentos:</p>
+          <h1 class="display-4 fw-bolder text-success mb-4">${{ "%.2f"|format(order.total_amount) }} USD</h1>
+          
+          <div class="bg-light rounded-4 p-4 mb-4 border" style="border-style: dashed !important;">
+            <p class="small text-muted mb-3">Escanee este código con su <strong>Chivo Wallet</strong> o billetera Bitcoin preferida.</p>
+            
+            <div class="bg-white p-2 d-inline-block rounded shadow-sm">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=bitcoin:{{ wallet }}?amount={{ order.total_amount }}" 
+                   alt="Código QR de Pago Bitcoin" 
+                   class="img-fluid" 
+                   style="width: 250px; height: 250px;">
+            </div>
+          </div>
+
+          <div class="mb-4 text-start">
+            <label class="form-label small fw-bold text-muted">Dirección de la billetera (Wallet)</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-wallet2"></i></span>
+              <input type="text" class="form-control bg-light border-start-0 font-monospace text-muted" id="walletAddress" value="{{ wallet }}" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copiarBilletera()" id="copyBtn">
+                <i class="bi bi-clipboard"></i> Copiar
+              </button>
+            </div>
+          </div>
+
+          <hr class="text-muted opacity-25">
+
+          <div class="alert alert-info text-start small mb-0 mt-3 border-0 bg-opacity-10 text-primary">
+            <i class="bi bi-info-circle-fill me-1"></i>
+            Una vez realizado el pago, presente el comprobante de su billetera al acercarse a la ventanilla de farmacia para retirar sus medicamentos.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Función para que el paciente pueda copiar la dirección fácilmente si está en celular
+  function copiarBilletera() {
+    var copyText = document.getElementById("walletAddress");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // Para dispositivos móviles
+    navigator.clipboard.writeText(copyText.value);
+    
+    var btn = document.getElementById("copyBtn");
+    var originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check2"></i> ¡Copiado!';
+    btn.classList.replace('btn-outline-secondary', 'btn-success');
+    btn.classList.add('text-white');
+    
+    setTimeout(function() {
+      btn.innerHTML = originalHTML;
+      btn.classList.replace('btn-success', 'btn-outline-secondary');
+      btn.classList.remove('text-white');
+    }, 2000);
+  }
+</script>
+{% endblock %}
