@@ -5,7 +5,6 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -37,7 +36,7 @@ class Prescription(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(256), nullable=False)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='pendiente')  # pendiente, en_proceso, listo, entregado
+    status = db.Column(db.String(20), default='pendiente')  # pendiente, pendiente_pago, en_proceso, listo, entregado
     notes = db.Column(db.Text, nullable=True)
 
     orders = db.relationship('Order', backref='prescription', lazy=True)
@@ -45,6 +44,7 @@ class Prescription(db.Model):
     def status_label(self):
         labels = {
             'pendiente': 'Pendiente',
+            'pendiente_pago': 'Esperando Pago', # NUEVO: Etiqueta para el paciente
             'en_proceso': 'En Proceso',
             'listo': 'Listo',
             'entregado': 'Entregado'
@@ -54,6 +54,7 @@ class Prescription(db.Model):
     def status_class(self):
         classes = {
             'pendiente': 'warning',
+            'pendiente_pago': 'danger', # NUEVO: Rojo/Naranja para llamar la atención del pago
             'en_proceso': 'info',
             'listo': 'success',
             'entregado': 'secondary'
@@ -70,6 +71,10 @@ class Medication(db.Model):
     nombre = db.Column(db.String(200), nullable=False)
     concentracion = db.Column(db.String(100), nullable=False)
     unidad = db.Column(db.String(50), nullable=False)
+    
+    # NUEVO: Columna para guardar el precio base del medicamento
+    precio = db.Column(db.Float, default=0.0) 
+    
     stock = db.Column(db.Integer, default=0)
     stock_minimo = db.Column(db.Integer, default=10)
 
@@ -90,12 +95,16 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     delivery_type = db.Column(db.String(20), nullable=False)  # sucursal, envio
     delivery_address = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), default='en_proceso')  # en_proceso, listo, entregado
+    status = db.Column(db.String(20), default='pendiente_pago')  # pendiente_pago, en_proceso, listo, entregado
+    
+    # NUEVO: Columna para guardar el total a cobrar de toda la orden
+    total_amount = db.Column(db.Float, default=0.0)
 
     items = db.relationship('OrderItem', backref='order', lazy=True)
 
     def status_label(self):
         labels = {
+            'pendiente_pago': 'Pendiente de Pago', # NUEVO
             'en_proceso': 'En Proceso',
             'listo': 'Listo para retirar',
             'entregado': 'Entregado'
@@ -104,6 +113,7 @@ class Order(db.Model):
 
     def status_class(self):
         classes = {
+            'pendiente_pago': 'danger', # NUEVO
             'en_proceso': 'info',
             'listo': 'success',
             'entregado': 'secondary'
@@ -120,6 +130,10 @@ class OrderItem(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
     medication_id = db.Column(db.Integer, db.ForeignKey('medications.id'), nullable=False)
     cantidad = db.Column(db.Integer, nullable=False)
+    
+    # NUEVO: Guarda el precio exacto al momento de la venta (histórico)
+    precio_unitario = db.Column(db.Float, default=0.0) 
+    
     dosis_indicada = db.Column(db.String(200), nullable=False)
     frecuencia = db.Column(db.String(200), nullable=False)
     duracion = db.Column(db.String(100), nullable=False)
