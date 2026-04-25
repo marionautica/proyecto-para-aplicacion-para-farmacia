@@ -22,7 +22,7 @@ app = Flask(__name__)
 db_folder = os.path.join(BASE_DIR, 'instance')
 if not os.path.exists(db_folder):
     os.makedirs(db_folder)
-)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
 app.config['LABELS_FOLDER'] = os.path.join(BASE_DIR, 'labels')
