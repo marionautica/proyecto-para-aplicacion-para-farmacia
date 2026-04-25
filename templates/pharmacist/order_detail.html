@@ -55,7 +55,7 @@
                                         <small class="d-block"><strong>Duración:</strong> {{ item.duracion }}</small>
                                     </td>
                                     <td class="text-end fw-bold text-dark">
-                                        ${{ "%.2f"|format(item.precio_unitario * item.cantidad) }}
+                                        ₿{{ "%.8f"|format(item.precio_unitario * item.cantidad) }}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -64,7 +64,7 @@
                                 <tr>
                                     <td colspan="3" class="text-end fw-bold">TOTAL DE LA ORDEN:</td>
                                     <td class="text-end fw-bold text-success fs-5">
-                                        ${{ "%.2f"|format(order.total_amount) }}
+                                        ₿{{ "%.8f"|format(order.total_amount) }}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -106,7 +106,7 @@
                             <div class="text-center mb-4">
                                 <i class="bi bi-currency-bitcoin display-4 text-warning"></i>
                                 <h5 class="fw-bold mt-2">Validación de Pago</h5>
-                                <p class="text-muted small">El paciente debe transferir <strong>${{ "%.2f"|format(order.total_amount) }}</strong> a la billetera institucional.</p>
+                                <p class="text-muted small">El paciente debe pagar <strong>₿{{ "%.8f"|format(order.total_amount) }}</strong> a la billetera institucional.</p>
                             </div>
                             <div class="alert alert-warning border-0 small mb-4">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i> Verifique su billetera antes de confirmar.
