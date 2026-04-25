@@ -201,7 +201,7 @@ def patient_payment(order_id):
     if order.prescription.patient_id != current_user.id:
         abort(403)
         
-    wallet_btc = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+    wallet_btc = "bc1pxhx0sd05wfp7fclykuqgmn48s7xh3ts27yxranzy6u30dspys2xqauks2u"
     return render_template('patient/payment.html', order=order, wallet=wallet_btc)
 
 @app.route('/paciente/receta/<int:prescription_id>')
