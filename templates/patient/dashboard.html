@@ -40,17 +40,22 @@
         {% endif %}
 
         <!-- Timeline mini -->
+        <!-- Timeline mini -->
         <div class="timeline-mini mt-3">
           <div class="d-flex justify-content-between">
             {% for step, label, icon in [
               ('pendiente', 'Recibida', 'bi-inbox'),
+              ('pendiente_pago', 'Pago', 'bi-currency-bitcoin'),
               ('en_proceso', 'En Proceso', 'bi-arrow-repeat'),
               ('listo', 'Lista', 'bi-check-circle'),
               ('entregado', 'Entregada', 'bi-bag-check')
             ] %}
-            {% set steps = ['pendiente', 'en_proceso', 'listo', 'entregado'] %}
-            {% set current_idx = steps.index(p.status) %}
+            {% set steps = ['pendiente', 'pendiente_pago', 'en_proceso', 'listo', 'entregado'] %}
+            
+            {# Manejo seguro en caso de que exista un estado no contemplado #}
+            {% set current_idx = steps.index(p.status) if p.status in steps else 0 %}
             {% set step_idx = steps.index(step) %}
+            
             <div class="text-center" style="flex:1">
               <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center
                 {% if step_idx <= current_idx %}bg-isss text-white{% else %}bg-light text-muted{% endif %}"
@@ -61,8 +66,12 @@
                      style="font-size:0.65rem">{{ label }}</small>
             </div>
             {% if not loop.last %}
-            <div class="align-self-center" style="flex:1;height:2px;
-              background: {% if step_idx < current_idx %}var(--isss-blue){% else %}#dee2e6{% endif %}">
+            <div class="align-self-center" 
+                 {% if step_idx < current_idx %}
+                 style="flex:1; height:2px; background: var(--isss-blue);"
+                 {% else %}
+                 style="flex:1; height:2px; background: #dee2e6;"
+                 {% endif %}>
             </div>
             {% endif %}
             {% endfor %}
