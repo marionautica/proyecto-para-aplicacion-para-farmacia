@@ -212,53 +212,51 @@ def pharmacist_prescription(prescription_id):
                            medications=Medication.query.all(), 
                            orders=Order.query.filter_by(prescription_id=prescription_id).all())
 
+from checkout_service import CheckoutService # Asegúrate de importar el servicio al inicio
+
 @app.route('/farmaceutico/receta/<int:prescription_id>/orden', methods=['POST'])
 @login_required
 @role_required('farmaceutico')
 def pharmacist_create_order(prescription_id):
-    prescription = Prescription.query.get_or_404(prescription_id)
-    
-    total_calculado = Decimal('0.0')
-    
-    order = Order(
-        prescription_id=prescription_id, 
-        pharmacist_id=current_user.id,
-        delivery_type=request.form.get('delivery_type'),
-        delivery_address=request.form.get('delivery_address'),
-        status='pendiente_pago',
-        total_amount=Decimal('0.0')
-    )
-    db.session.add(order)
-    db.session.flush()
-
+    # 1. Recolectamos los datos del formulario
     med_ids = request.form.getlist('medication_id[]')
     cants = request.form.getlist('cantidad[]')
-    
-    for i, m_id in enumerate(med_ids):
-        med = Medication.query.get(int(m_id))
-        cantidad = int(cants[i])
-        
-        subtotal = med.precio * Decimal(str(cantidad))
-        total_calculado += subtotal
-        med.stock -= cantidad
-        
-        item = OrderItem(
-            order_id=order.id, 
-            medication_id=med.id, 
-            cantidad=cantidad,
-            precio_unitario=med.precio, 
-            dosis_indicada=request.form.getlist('dosis_indicada[]')[i],
-            frecuencia=request.form.getlist('frecuencia[]')[i], 
-            duracion=request.form.getlist('duracion[]')[i]
+    dosis = request.form.getlist('dosis_indicada[]')
+    frecs = request.form.getlist('frecuencia[]')
+    durs = request.form.getlist('duracion[]')
+
+    items_data = []
+    for i in range(len(med_ids)):
+        items_data.append({
+            'med_id': int(med_ids[i]),
+            'qty': int(cants[i]),
+            'dosis': dosis[i],
+            'frec': frecs[i],
+            'dur': durs[i]
+        })
+
+    delivery_info = {
+        'type': request.form.get('delivery_type'),
+        'address': request.form.get('delivery_address')
+    }
+
+    try:
+        # 2. Delegamos la creación al Sótano Atómico
+        # Nota: Aquí ya NO se resta stock, solo se crea la orden 'pendiente'
+        order = CheckoutService.create_order_from_prescription(
+            prescription_id=prescription_id,
+            pharmacist_id=current_user.id,
+            items_data=items_data,
+            delivery_info=delivery_info
         )
-        db.session.add(item)
+        
+        flash(f'Orden {order.reference_id} creada exitosamente. Esperando pago.', 'success')
+        return redirect(url_for('pharmacist_order_detail', order_id=order.id))
 
-    order.total_amount = total_calculado
-    prescription.status = 'pendiente_pago'
-    db.session.commit()
-    flash(f'Orden creada. Total a cobrar: ${total_calculado:.8f}', 'success')
-    return redirect(url_for('pharmacist_order_detail', order_id=order.id))
-
+    except Exception as e:
+        flash(f'Error al crear la orden: {str(e)}', 'danger')
+        return redirect(url_for('pharmacist_prescription', prescription_id=prescription_id))
+    
 @app.route('/farmaceutico/orden/<int:order_id>')
 @login_required
 @role_required('farmaceutico')
