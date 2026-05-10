@@ -436,6 +436,22 @@ def forbidden(e): return render_template('errors/403.html'), 403
 @app.errorhandler(404)
 def not_found(e): return render_template('errors/404.html'), 404
 
+with app.app_context():
+    # 1. Crea físicamente el archivo .db y las tablas si no existen
+    db.create_all()
+    
+    # 2. Asegura que el usuario admin exista tras el Hard Reset
+    if not User.query.filter_by(username='admin').first():
+        admin = User(
+            username='admin',
+            role='admin',
+            nombre_completo='Administrador del Sistema'
+        )
+        admin.set_password('admin123') # Contraseña temporal
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ EOS: Base de Datos y Admin inicializados en Railway.")
+
 if __name__ == '__main__':
     # Railway inyecta el puerto en esta variable de entorno
     port = int(os.environ.get("PORT", 5000))
