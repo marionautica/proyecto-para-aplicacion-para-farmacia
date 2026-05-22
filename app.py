@@ -4,6 +4,7 @@ from datetime import datetime, date
 from functools import wraps
 from decimal import Decimal  # Precisión para Bitcoin
 
+
 from flask import (Flask, render_template, redirect, url_for, flash,
                    request, abort, send_file, jsonify)
 from flask_login import (LoginManager, login_user, logout_user,
@@ -13,6 +14,7 @@ from werkzeug.utils import secure_filename
 from models import db, User, Prescription, Medication, Order, OrderItem, Label
 from label_generator import generate_label
 
+from tiankii_service import TiankiiService
 # ---------------------------------------------------------------------------
 # App factory / config
 # ---------------------------------------------------------------------------
@@ -173,11 +175,31 @@ def patient_upload():
 @login_required
 @role_required('paciente')
 def patient_payment(order_id):
+    # 1. Validar la existencia de la orden y la propiedad del paciente
     order = Order.query.get_or_404(order_id)
     if order.prescription.patient_id != current_user.id:
         abort(403)
-    wallet_btc = "bc1pxhx0sd05wfp7fclykuqgmn48s7xh3ts27yxranzy6u30dspys2xqauks2u"
-    return render_template('patient/payment.html', order=order, wallet=wallet_btc)
+        
+    # Verificar si la orden ya fue pagada para evitar doble cobro
+    if order.status == 'pagado':
+        flash('Esta orden ya ha sido liquidada exitosamente.', 'info')
+        return redirect(url_for('patient_dashboard'))
+
+    # 2. Invocar al Sistema Eléctrico para generar el cobro real en Bitcoin
+    checkout_response = TiankiiService.create_checkout(
+        order_reference=order.reference_id,  # Referencia única (BIT-XXXX)
+        amount=order.total_amount            # Monto exacto en Decimal
+    )
+
+    # 3. Procesar la respuesta de la pasarela
+    if checkout_response.get("success"):
+        print(f"⚡ Redirigiendo al paciente al checkout de Tiankii: {checkout_response['checkout_id']}")
+        # Redirección directa y fluida a la factura Lightning / On-chain
+        return redirect(checkout_response["payment_url"])
+    else:
+        # Manejo elegante de errores de conectividad o tokens sin romper la experiencia del usuario
+        flash(f"No se pudo iniciar el portal de pagos: {checkout_response.get('error')}", "danger")
+        return redirect(url_for('patient_dashboard'))
 
 @app.route('/paciente/receta/<int:prescription_id>')
 @login_required
