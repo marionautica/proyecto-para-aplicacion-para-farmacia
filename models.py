@@ -90,6 +90,7 @@ class Medication(db.Model):
 class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
+    reference_id = db.Column(db.String(50), unique=True, nullable=False)
     prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id'), nullable=False)
     pharmacist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
