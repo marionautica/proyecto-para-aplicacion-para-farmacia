@@ -130,20 +130,17 @@ class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
     medication_id = db.Column(db.Integer, db.ForeignKey('medications.id'), nullable=False)
-    cantidad = db.Column(db.Integer, nullable=False)
     
-    # NUEVO: Guarda el precio exacto al momento de la venta (histórico)
-    precio_unitario = db.Column(db.Float, default=0.0) 
-    
-    dosis_indicada = db.Column(db.String(200), nullable=False)
-    frecuencia = db.Column(db.String(200), nullable=False)
-    duracion = db.Column(db.String(100), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, default=0.0) #Guarda el precio exacto al momento de la venta (histórico)
+    dose_indicated = db.Column(db.String(200), nullable=False)
+    frequency = db.Column(db.String(200), nullable=False)
+    duration = db.Column(db.String(100), nullable=False)
 
     label = db.relationship('Label', backref='order_item', lazy=True, uselist=False)
 
     def __repr__(self):
         return f'<OrderItem {self.id}>'
-
 
 class Label(db.Model):
     __tablename__ = 'labels'

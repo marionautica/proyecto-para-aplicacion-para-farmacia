@@ -40,14 +40,14 @@ class CheckoutService:
 
                 # Crear el detalle de la orden
                 order_item = OrderItem(
-                    order_id=new_order.id,
-                    medication_id=med.id,
-                    cantidad=item['qty'],
-                    precio_unitario=med.precio,
-                    dosis_indicated=item.get('dosis', ''),
-                    frecuencia=item.get('frec', ''),
-                    duracion=item.get('dur', '')
-                )
+                order_id=new_order.id,
+                medication_id=med.id,
+                quantity=item['qty'],             
+                price=med.precio,                 
+                dose_indicated=item.get('dosis', ''), 
+                frequency=item.get('frec', ''),   
+                duration=item.get('dur', '')      
+            )
                 db.session.add(order_item)
 
             new_order.total_amount = total_calculado
