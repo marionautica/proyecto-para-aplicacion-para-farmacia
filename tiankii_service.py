@@ -27,7 +27,7 @@ class TiankiiService:
         Utiliza autodescubrimiento para el dominio del Webhook.
         """
         
-        url = f"{cls.BASE_URL}/v1/checkouts"
+        url = f"{cls.BASE_URL}/v1/invoices"
         
         # Autodescubrimiento del entorno (Railway vs Local)
         railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
