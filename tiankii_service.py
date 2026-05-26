@@ -36,7 +36,7 @@ class TiankiiService:
         else:
             base_url = "http://localhost:5000"
 
-            monto_seguro = round(float(amount), 2)
+        monto_seguro = round(float(amount), 2)
 
         # Payload profesional
         payload = {
