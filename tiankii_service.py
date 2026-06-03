@@ -4,7 +4,7 @@ from decimal import Decimal
 
 class TiankiiService:
     # Endpoint oficial de producción/test
-    BASE_URL = "https://api.md.tiankii.com" 
+    BASE_URL = "https://dev1.api.md.tiankii.com"
         
     @classmethod
     def _get_headers(cls):
@@ -15,7 +15,7 @@ class TiankiiService:
             raise ValueError("Configuración de pasarela de pago ausente.")
         
         return {
-            "Authorization": f"Bearer {token}",
+            "x-api-key": token,
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
@@ -27,9 +27,10 @@ class TiankiiService:
         Utiliza autodescubrimiento para el dominio del Webhook.
         """
         
-        url = f"{cls.BASE_URL}/v1/invoices"
+        #url = f"{cls.BASE_URL}/api/v1/invoices"
+        url = f"{cls.BASE_URL}/api/v1/invoices"
         
-        # Autodescubrimiento del entorno (Railway vs Local)
+        # entorno (Railway y Local)
         railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
         if railway_domain:
             base_url = f"https://{railway_domain}"
@@ -38,8 +39,14 @@ class TiankiiService:
 
         monto_seguro = round(float(amount), 2)
 
+        store_id = os.environ.get("TIANKII_STORE_ID")
+        if not store_id:
+            # no se si hiria aqui o en railway
+            store_id = "89A276326C4254EBD8"
+
         # Payload profesional
         payload = {
+            "store_id": store_id,
             "amount": monto_seguro, 
             "currency": "USD",
             "orderId": order_reference,
