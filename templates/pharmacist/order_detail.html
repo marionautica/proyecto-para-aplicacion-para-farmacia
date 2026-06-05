@@ -47,12 +47,12 @@
                                         <small class="text-muted">{{ item.medication.concentracion }}</small>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-secondary rounded-pill px-3">{{ item.cantidad }}</span>
+                                        <span class="badge bg-secondary rounded-pill px-3">{{ item.quantity }}</span>
                                     </td>
                                     <td>
-                                        <small class="d-block"><strong>Dosis:</strong> {{ item.dosis_indicada }}</small>
-                                        <small class="d-block"><strong>Frecuencia:</strong> {{ item.frecuencia }}</small>
-                                        <small class="d-block"><strong>Duración:</strong> {{ item.duracion }}</small>
+                                        <small class="d-block"><strong>Dosis:</strong> {{ item.dose_indicated }}</small>
+                                        <small class="d-block"><strong>Frecuencia:</strong> {{ item.frequency }}</small>
+                                        <small class="d-block"><strong>Duración:</strong> {{ item.duration }}</small>
                                     </td>
                                     <td class="text-end fw-bold text-dark">
                                         ₿{{ "%.8f"|format(item.price * item.quantity) }}

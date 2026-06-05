@@ -443,47 +443,67 @@ def admin_prescriptions():
 # ---------------------------------------------------------------------------
 # Webhooks y APIs
 # ---------------------------------------------------------------------------
+from flask import request, jsonify
+
 @app.route('/webhook/tiankii', methods=['POST'])
 def tiankii_webhook():
     """
-    Sensor Asíncrono de Pagos.
-    Recibe la confirmación de Tiankii y ejecuta la transacción atómica de inventario.
+    Sensor Asíncrono de Pagos - API v1 Certificada.
+    Recibe la confirmación de Tiankii, extrae los metadatos anidados 
+    y ejecuta la transacción atómica de inventario.
     """
     try:
-        # 1. Captura del pulso eléctrico (Payload JSON de Tiankii)
+        # 1. Captura del payload JSON enviado por Tiankii
         payload = request.get_json()
         if not payload:
+            print("⚠️ Webhook rechazado: Cuerpo de petición ausente.")
             return jsonify({"error": "Cuerpo de petición ausente"}), 400
 
-        # 2. Extracción de variables críticas
-        order_reference = payload.get('orderId')
+        # 2. Extracción de variables con tipado seguro y desanidación (Defensa en profundidad)
+        invoice_id = payload.get('invoiceId')  # ID único de la factura de Tiankii (ej: 'inv-xyz789')
         status = payload.get('status', '').upper() 
+        
+        # Ojo aquí: Extraemos de 'metadata' tal como exige la estructura v1
+        metadata = payload.get('metadata', {})
+        order_reference = None
+        
+        if isinstance(metadata, dict):
+            order_reference = metadata.get('orderId')
+            
+        # Fallback de respaldo: por si Tiankii aplanara el JSON en actualizaciones de red
+        if not order_reference:
+            order_reference = payload.get('orderId')
 
-        print(f"🔔 Webhook: Notificación recibida -> Orden: {order_reference} | Estado: {status}")
+        print(f"🔔 Webhook Tiankii: Pulso recibido -> Invoice: {invoice_id} | Orden Interna: {order_reference} | Estado: {status}")
 
-        # 3. Lógica de Negocio: Solo actuamos si el estado es de pago exitoso
-        # Tiankii suele enviar 'PAID' o 'COMPLETED'
+        # Validación de seguridad: Asegurar que podemos identificar el pedido antes de proceder
+        if not order_reference:
+            print(f"⚠️ Alerta: Webhook procesado sin orderId válido. Estructura del payload: {payload}")
+            return jsonify({"error": "No se pudo mapear la referencia interna de la orden"}), 400
+
+        # 3. Lógica de Negocio: Tiankii v1 opera con el estado 'paid'
         if status in ['PAID', 'COMPLETED', 'SUCCESS']:
             
-            # Aquí es donde el CheckoutService brilla:
-            # - Si la orden ya estaba pagada, devuelve True sin tocar el stock.
-            # - Si hay stock, lo descuenta atómicamente.
-            # - Si falla, hace rollback.
+            # CheckoutService ejecuta la lógica atómica de base de datos
             success = CheckoutService.finalize_payment(order_reference)
             
             if success:
-                print(f"✅ Transacción completada. Stock de la orden {order_reference} descontado.")
+                print(f"✅ ÉXITO: Stock de la orden {order_reference} descontado y pago asentado.")
             else:
-                print(f"⚠️ Alerta: Falla al finalizar el pago o la orden {order_reference} ya estaba procesada.")
+                print(f"⚠️ Info: CheckoutService omitió el proceso. La orden {order_reference} ya estaba completada o no requiere stock.")
 
-        # 4. Idempotencia y Cierre
-        # Siempre devolvemos HTTP 200 rápido a Tiankii para que no sature el servidor con reintentos.
-        return jsonify({"received": True, "processed_status": status}), 200
+        # 4. Idempotencia: Devolver HTTP 200 rápido a Tiankii para cerrar el loop de reintentos
+        return jsonify({
+            "received": True, 
+            "invoiceId": invoice_id, 
+            "processed_status": status
+        }), 200
 
     except Exception as e:
-        print(f"❌ FATAL: Error procesando webhook de Tiankii: {str(e)}")
-        # Devolver 500 indica a Tiankii que nuestro servidor falló y debe reintentar el webhook más tarde
-        return jsonify({"error": "Error interno procesando el webhook"}), 500
+        print(f"❌ FATAL: Error crítico de servidor procesando webhook de Tiankii: {str(e)}")
+        # Devolver 500 le indica a Tiankii que nuestro backend tuvo un tropiezo temporal
+        # y que debe aplicar su política de reintentos (Retry Policy) más tarde.
+        return jsonify({"error": "Error interno del servidor en procesamiento de pagos"}), 500
 
 
 # ---------------------------------------------------------------------------
