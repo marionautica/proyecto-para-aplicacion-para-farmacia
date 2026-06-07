@@ -29,7 +29,7 @@ class TiankiiService:
         return os.environ.get("APP_LOCAL_URL") or "http://localhost:5000"
         
 
-        @classmethod
+    @classmethod
     def _get_base_url_app(cls) -> str:
         """
         Autodescubrimiento del dominio del backend para el enrutamiento dinámico
