@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Dict, Any, Tuple
 
 class TiankiiService:
-    # Endpoint oficial de producción/test
+    # Endpoint oficial de producción
     BASE_URL = "https://api.md.tiankii.com"
         
     @classmethod
@@ -16,7 +16,7 @@ class TiankiiService:
             raise ValueError("Configuración de pasarela de pago ausente.")
         
         return {
-            "api_key": token,  # <-- CORRECCIÓN: La API exige 'api_key', no 'x-api-key'
+            "api_key": str(token).strip(),  
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
@@ -42,6 +42,16 @@ class TiankiiService:
         url = f"{cls.BASE_URL}/v1/invoice"
         base_url_app = cls._get_base_url_app()
 
+        # Validación de configuración obligatoria antes de intentar nada
+        store_id = os.environ.get("TIANKII_STORE_ID")
+        app_id = os.environ.get("TIANKII_APP_ID")
+        token = os.environ.get("TIANKII_TOKEN_POS")
+        
+        if not all([store_id, app_id, token]):
+            missing = [k for k, v in {"TIANKII_STORE_ID": store_id, "TIANKII_APP_ID": app_id, "TIANKII_TOKEN_POS": token}.items() if not v]
+            print(f"❌ FATAL: Faltan variables de entorno: {', '.join(missing)}")
+            return {"success": False, "error": f"Falta configuración obligatoria: {', '.join(missing)}"}
+
         # Validación y formateo estricto del monto a tipo de dato 'number'
         try:
             monto_seguro = round(float(amount), 2)
@@ -49,14 +59,6 @@ class TiankiiService:
                 return {"success": False, "error": "El monto debe ser un número positivo mayor a cero."}
         except (ValueError, TypeError):
             return {"success": False, "error": "Monto de transacción inválido."}
-
-        # Extracción de variables requeridas por el validador de Tiankii
-        store_id = os.environ.get("TIANKII_STORE_ID") or "9Zez8so75n9ydrNFfnYXerPSnCP9NfWxqrsKhMgYzHRB"
-        app_id = os.environ.get("TIANKII_APP_ID")
-        
-        if not app_id:
-            print("❌ FATAL: TIANKII_APP_ID es requerido y no está configurado.")
-            return {"success": False, "error": "Falta configuración de la aplicación (appId) en el servidor."}
 
         # Payload bajo especificaciones oficiales v1
         payload = {
