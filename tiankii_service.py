@@ -16,7 +16,7 @@ class TiankiiService:
             raise ValueError("Configuración de pasarela de pago ausente.")
         
         return {
-            "api_key": str(token).strip(),  
+            "x-api-key": str(token).strip(),  
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
