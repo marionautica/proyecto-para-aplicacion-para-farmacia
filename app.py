@@ -193,7 +193,7 @@ def patient_payment(order_id):
 
     # 3. Procesar la respuesta de la pasarela
     if checkout_response.get("success"):
-        print(f"⚡ Redirigiendo al paciente al checkout de Tiankii: {checkout_response['checkout_id']}")
+        print(f"⚡ Redirigiendo al paciente al checkout de Tiankii: {checkout_response.get('invoice_id')}")
         # Redirección directa y fluida a la factura Lightning / On-chain
         return redirect(checkout_response["payment_url"])
     else:
