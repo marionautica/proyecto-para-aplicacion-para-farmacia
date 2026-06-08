@@ -5,7 +5,7 @@ from typing import Dict, Any, Tuple
 
 class TiankiiService:
     # Endpoint oficial de producción/test
-    BASE_URL = "https://dev1.api.md.tiankii.com"
+    BASE_URL = "https://api.md.tiankii.com"
         
     @classmethod
     def _get_headers(cls) -> Dict[str, str]:
@@ -58,7 +58,7 @@ class TiankiiService:
             print("❌ FATAL: TIANKII_APP_ID es requerido y no está configurado.")
             return {"success": False, "error": "Falta configuración de la aplicación (appId) en el servidor."}
 
-        # Payload definitivo estructurado bajo especificaciones oficiales v1
+        # Payload bajo especificaciones oficiales v1
         payload = {
             "amount": monto_seguro,
             "currency": moneda,
