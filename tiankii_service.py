@@ -16,18 +16,10 @@ class TiankiiService:
             raise ValueError("Configuración de pasarela de pago ausente.")
         
         return {
-            "x-api-key": token,
+            "api_key": token,  # <-- CORRECCIÓN: La API exige 'api_key', no 'x-api-key'
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
-
-    @classmethod
-    def _get_base_url_app(cls) -> str:
-        railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
-        if railway_domain:
-            return f"https://{railway_domain}"
-        return os.environ.get("APP_LOCAL_URL") or "http://localhost:5000"
-        
 
     @classmethod
     def _get_base_url_app(cls) -> str:
