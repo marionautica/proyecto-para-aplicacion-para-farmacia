@@ -1,8 +1,10 @@
 import os
 import uuid
+import re
 from datetime import datetime, date
 from functools import wraps
 from decimal import Decimal  # Precisión para Bitcoin
+
 
 
 from flask import (Flask, render_template, redirect, url_for, flash,
@@ -443,68 +445,44 @@ def admin_prescriptions():
 # ---------------------------------------------------------------------------
 # Webhooks y APIs
 # ---------------------------------------------------------------------------
-from flask import request, jsonify
-
 @app.route('/webhook/tiankii', methods=['POST'])
 def tiankii_webhook():
-    """
-    Sensor Asíncrono de Pagos - API v1 Certificada.
-    Recibe la confirmación de Tiankii, extrae los metadatos anidados 
-    y ejecuta la transacción atómica de inventario.
-    """
     try:
-        # 1. Captura del payload JSON enviado por Tiankii
         payload = request.get_json()
         if not payload:
-            print("⚠️ Webhook rechazado: Cuerpo de petición ausente.")
-            return jsonify({"error": "Cuerpo de petición ausente"}), 400
+            return jsonify({"error": "Cuerpo ausente"}), 400
 
-        # 2. Extracción de variables con tipado seguro y desanidación (Defensa en profundidad)
-        invoice_id = payload.get('invoiceId')  # ID único de la factura de Tiankii (ej: 'inv-xyz789')
+        invoice_id = payload.get('id') # Nota: Tiankii envía 'id' en lugar de 'invoiceId' en este payload
         status = payload.get('status', '').upper() 
-        
-        # Ojo aquí: Extraemos de 'metadata' tal como exige la estructura v1
-        metadata = payload.get('metadata', {})
-        order_reference = None
-        
-        if isinstance(metadata, dict):
-            order_reference = metadata.get('orderId')
-            
-        # Fallback de respaldo: por si Tiankii aplanara el JSON en actualizaciones de red
+        description = payload.get('description', '')
+
+        # 1. Intentar obtener de metadata (si Tiankii lo envía)
+        order_reference = payload.get('metadata', {}).get('orderId')
+
+        # 2. Si no está en metadata, extraer mediante Expresión Regular de la descripción
         if not order_reference:
-            order_reference = payload.get('orderId')
+            match = re.search(r'#(BIT-[A-Z0-9]+)', description)
+            if match:
+                order_reference = match.group(1)
 
-        print(f"🔔 Webhook Tiankii: Pulso recibido -> Invoice: {invoice_id} | Orden Interna: {order_reference} | Estado: {status}")
+        print(f"🔔 Webhook Tiankii: Procesando -> Invoice: {invoice_id} | Orden: {order_reference} | Estado: {status}")
 
-        # Validación de seguridad: Asegurar que podemos identificar el pedido antes de proceder
         if not order_reference:
-            print(f"⚠️ Alerta: Webhook procesado sin orderId válido. Estructura del payload: {payload}")
-            return jsonify({"error": "No se pudo mapear la referencia interna de la orden"}), 400
+            print(f"⚠️ Alerta: No se pudo extraer la orden. Payload: {payload}")
+            return jsonify({"error": "No se pudo mapear la orden"}), 400
 
-        # 3. Lógica de Negocio: Tiankii v1 opera con el estado 'paid'
         if status in ['PAID', 'COMPLETED', 'SUCCESS']:
-            
-            # CheckoutService ejecuta la lógica atómica de base de datos
             success = CheckoutService.finalize_payment(order_reference)
-            
             if success:
-                print(f"✅ ÉXITO: Stock de la orden {order_reference} descontado y pago asentado.")
+                print(f"✅ ÉXITO: Orden {order_reference} marcada como pagada.")
             else:
-                print(f"⚠️ Info: CheckoutService omitió el proceso. La orden {order_reference} ya estaba completada o no requiere stock.")
+                print(f"⚠️ Info: La orden {order_reference} no requirió procesamiento extra.")
 
-        # 4. Idempotencia: Devolver HTTP 200 rápido a Tiankii para cerrar el loop de reintentos
-        return jsonify({
-            "received": True, 
-            "invoiceId": invoice_id, 
-            "processed_status": status
-        }), 200
+        return jsonify({"received": True}), 200
 
     except Exception as e:
-        print(f"❌ FATAL: Error crítico de servidor procesando webhook de Tiankii: {str(e)}")
-        # Devolver 500 le indica a Tiankii que nuestro backend tuvo un tropiezo temporal
-        # y que debe aplicar su política de reintentos (Retry Policy) más tarde.
-        return jsonify({"error": "Error interno del servidor en procesamiento de pagos"}), 500
-
+        print(f"❌ FATAL: Error en Webhook: {str(e)}")
+        return jsonify({"error": "Error interno"}), 500
 
 # ---------------------------------------------------------------------------
 # Otros (Gestión de Archivos y Errores)
