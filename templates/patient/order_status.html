@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Estado de Receta #{{ prescription.id }} – Bitfarma{% endblock %}
+
 {% block content %}
 <div class="d-flex align-items-center mb-4">
   <a href="{{ url_for('patient_dashboard') }}" class="btn btn-light btn-sm me-3">
@@ -135,7 +136,7 @@
           {% if order.total_amount > 0 %}
           <div class="mb-2">
             <small class="text-muted">Total a Pagar:</small>
-            <div class="fw-bold text-success">₿{{ "%.8f"|format(order.total_amount) }}</div>
+            <div class="fw-bold text-success">${{ "%.8f"|format(order.total_amount) }}</div>
           </div>
           {% endif %}
 
@@ -145,15 +146,15 @@
           <div class="bg-light rounded-3 p-3 mb-2">
             <div class="d-flex justify-content-between">
               <strong>{{ item.medication.nombre }}</strong>
-              <span class="badge bg-secondary">{{ item.cantidad }} {{ item.medication.unidad }}</span>
+              <span class="badge bg-secondary">{{ item.quantity }} {{ item.medication.unidad }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center mt-1">
                 <small class="text-muted">
-                  {{ item.medication.concentracion }} — Dosis: {{ item.dosis_indicada }}<br>
-                  Frecuencia: {{ item.frecuencia }} — Duración: {{ item.duracion }}
+                  {{ item.medication.concentracion }} — Dosis: {{ item.dose_indicated }}<br>
+                  Frecuencia: {{ item.frequency }} — Duración: {{ item.duration }}
                 </small>
-                {% if item.precio_unitario %}
-                <small class="fw-bold text-success">${{ "%.8f"|format(item.precio_unitario * item.cantidad) }}</small>
+                {% if item.price %}
+                <small class="fw-bold text-success">${{ "%.8f"|format(item.price * item.quantity) }}</small>
                 {% endif %}
             </div>
           </div>
@@ -171,4 +172,24 @@
     {% endif %}
   </div>
 </div>
+
+{% if prescription.status == 'pendiente_pago' and orders %}
+<script>
+    const orderId = "{{ orders[0].id }}";
+    const intervalId = setInterval(function() {
+        fetch('/api/order/status/' + orderId)
+            .then(response => response.json())
+            .then(data => {
+                // Si el servidor indica que el estado ya no es 'pendiente_pago', recargamos
+                if (data.status !== 'pendiente_pago') {
+                    console.log("Pago detectado, recargando página...");
+                    clearInterval(intervalId);
+                    location.reload(); 
+                }
+            })
+            .catch(error => console.error('Error verificando estado:', error));
+    }, 5000); // Consulta cada 5 segundos
+</script>
+{% endif %}
+
 {% endblock %}

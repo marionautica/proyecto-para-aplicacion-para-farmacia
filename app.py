@@ -4,6 +4,7 @@ import re
 from datetime import datetime, date
 from functools import wraps
 from decimal import Decimal  # Precisión para Bitcoin
+from flask import jsonify
 
 
 
@@ -483,6 +484,24 @@ def tiankii_webhook():
     except Exception as e:
         print(f"❌ FATAL: Error en Webhook: {str(e)}")
         return jsonify({"error": "Error interno"}), 500
+
+
+# ---------------------------------------------------------------------------
+# API - Punto de acceso
+# ---------------------------------------------------------------------------
+
+@app.route('/api/order/status/<int:order_id>')
+@login_required
+def get_order_status(order_id):
+    # 1. Obtenemos la orden
+    order = Order.query.get_or_404(order_id)
+    
+    # 2. Seguridad: Solo permitimos consultar si el paciente es el dueño
+    if order.prescription.patient_id != current_user.id:
+        return jsonify({"error": "No autorizado"}), 403
+        
+    # 3. Retornamos el estado actual en formato JSON
+    return jsonify({"status": order.status})
 
 # ---------------------------------------------------------------------------
 # Otros (Gestión de Archivos y Errores)

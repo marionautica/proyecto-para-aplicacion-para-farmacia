@@ -84,11 +84,11 @@ class CheckoutService:
             # Verificación final de stock justo antes de descontar
             for item in order.items:
                 med = Medication.query.get(item.medication_id)
-                if med.stock < item.cantidad:
+                if med.stock < item.quantity:
                     raise Exception(f"Stock insuficiente de último momento para {med.nombre}")
                 
                 # DESCUENTO REAL DE STOCK
-                med.stock -= item.cantidad
+                med.stock -= item.quantity
 
             # Marcamos como pagado y actualizamos receta
             order.status = 'pagado'
