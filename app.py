@@ -196,9 +196,9 @@ def patient_payment(order_id):
 
     # 3. Procesar la respuesta de la pasarela
     if checkout_response.get("success"):
-        print(f"⚡ Redirigiendo al paciente al checkout de Tiankii: {checkout_response.get('invoice_id')}")
-        # Redirección directa y fluida a la factura Lightning / On-chain
-        return redirect(checkout_response["payment_url"])
+        return render_template('patient/payment_embed.html', 
+                               payment_url=checkout_response["payment_url"], 
+                               order_id=order_id)
     else:
         # Manejo elegante de errores de conectividad o tokens sin romper la experiencia del usuario
         flash(f"No se pudo iniciar el portal de pagos: {checkout_response.get('error')}", "danger")
