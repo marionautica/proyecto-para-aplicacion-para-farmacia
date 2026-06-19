@@ -181,4 +181,30 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Solo activamos el polling si estamos en el estado que requiere pago
+    {% if order.status == 'pendiente_pago' %}
+    (function() {
+        const orderId = {{ order.id }};
+        const currentStatus = "{{ order.status }}";
+        
+        // Polling: Consultar cada 3 segundos (3000ms)
+        const intervalId = setInterval(function() {
+            // Usamos 'no-store' para forzar al navegador a traer datos frescos del servidor
+            fetch('/api/order/status/' + orderId, { cache: 'no-store' })
+                .then(response => response.json())
+                .then(data => {
+                    // Si el estado en la base de datos ya no es 'pendiente_pago'
+                    if (data.status !== currentStatus) {
+                        console.log("Cambio de estado detectado. Recargando...");
+                        clearInterval(intervalId); // 1. Detenemos la consulta
+                        window.location.reload();  // 2. Recargamos la interfaz
+                    }
+                })
+                .catch(error => console.error('Error verificando estado:', error));
+        }, 3000); 
+    })();
+    {% endif %}
+</script>
 {% endblock %}
