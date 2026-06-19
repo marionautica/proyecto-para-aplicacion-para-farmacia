@@ -494,14 +494,18 @@ def tiankii_webhook():
 @app.route('/api/order/status/<int:order_id>')
 @login_required
 def get_order_status(order_id):
-    # 1. Obtenemos la orden
     order = Order.query.get_or_404(order_id)
     
-    # 2. Seguridad: Solo permitimos consultar si el paciente es el dueño
-    if order.prescription.patient_id != current_user.id:
+    # 1. Verificamos si el usuario es el paciente dueño de la receta
+    es_paciente_dueno = (order.prescription.patient_id == current_user.id)
+    
+    # 2. Verificamos si el usuario tiene rol de staff (farmacéutico o admin)
+    es_personal_autorizado = (current_user.role in ['farmaceutico', 'admin'])
+    
+    # 3. Solo negamos el acceso si NO es el paciente dueño Y NO es personal autorizado
+    if not (es_paciente_dueno or es_personal_autorizado):
         return jsonify({"error": "No autorizado"}), 403
         
-    # 3. Retornamos el estado actual en formato JSON
     return jsonify({"status": order.status})
 
 # ---------------------------------------------------------------------------

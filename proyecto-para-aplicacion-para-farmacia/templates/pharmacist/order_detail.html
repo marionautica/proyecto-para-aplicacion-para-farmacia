@@ -1,0 +1,18 @@
+<script>
+    const orderId = {{ order.id }}; // Asegúrate de que 'order' sea el objeto de la orden
+
+    const intervalId = setInterval(function() {
+        fetch('/api/order/status/' + orderId)
+            .then(response => response.json())
+            .then(data => {
+                // Si el estado cambia a 'pagado' o cualquier otro que requiera acción inmediata
+                // Puedes ajustar la lógica según los estados que te interesen
+                if (data.status === 'pagado') {
+                    console.log("Pago detectado, actualizando vista...");
+                    clearInterval(intervalId);
+                    window.location.reload(); // Recarga para que el botón de "Marcar como listo" aparezca
+                }
+            })
+            .catch(error => console.error('Error verificando estado:', error));
+    }, 3000); // Consulta cada 3 segundos
+</script>
