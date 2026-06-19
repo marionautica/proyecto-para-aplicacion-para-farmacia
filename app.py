@@ -198,7 +198,8 @@ def patient_payment(order_id):
     if checkout_response.get("success"):
         return render_template('patient/payment_embed.html', 
                                payment_url=checkout_response["payment_url"], 
-                               order_id=order_id)
+                               order_id=order_id,
+                               order=order)
     else:
         # Manejo elegante de errores de conectividad o tokens sin romper la experiencia del usuario
         flash(f"No se pudo iniciar el portal de pagos: {checkout_response.get('error')}", "danger")
